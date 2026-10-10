@@ -3,7 +3,7 @@
 A retro CRT-style terminal dashboard for a personal homelab. Runs entirely
 locally — no cloud, no accounts, no telemetry.
 
-![Screenshot](screenshots/console.png)
+![Screenshot](screenshots/Screenshot.png)
 
 ## Features
 
