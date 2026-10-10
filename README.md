@@ -55,6 +55,7 @@ No dependencies. No `pip install`. No build step.
 
 To stop the server, press `Ctrl+C` in the terminal where it's running.
 
+*To start the server automatically on boot, see [start.md](start.md).*
 ## Configuration
 
 Everything you need to edit lives in the `<script>` block at the top of
