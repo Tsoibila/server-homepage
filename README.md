@@ -1,7 +1,7 @@
 # Homelab Console
 
 A retro CRT-style terminal dashboard for a personal homelab. Runs entirely
-locally — no cloud, no accounts, no telemetry.
+locally, no cloud, no accounts, no telemetry.
 
 ![Screenshot](screenshots/Screenshot.png)
 
