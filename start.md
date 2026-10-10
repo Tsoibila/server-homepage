@@ -109,9 +109,7 @@ sudo systemctl enable homelab      # start on boot again
 
 ### 6. After editing `serve.py` or `index.html`
 
-`index.html` is served fresh on every request — no restart needed.
-
-If you edit `serve.py`, you need to restart the service:
+If you edit `serve.py` or `index.html`, you need to restart the service:
 
 ```bash
 sudo systemctl restart homelab
