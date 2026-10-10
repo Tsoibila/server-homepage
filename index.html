@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HOMELAB CONSOLE v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#33ff33;
+    --green-dim:#1a8a1a;
+    --amber:#ffb000;
+    --bg:#000;
+    --glow:0 0 2px rgba(51,255,51,.85), 0 0 8px rgba(51,255,51,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--green);}
+  body{
+    font-family:'VT323','Perfect DOS VGA 437','More Perfect VGA','IBM VGA 8x16','Press Start 2P','Courier New',monospace;
+    font-size:22px;line-height:1.15;
+    min-height:100vh;
+    padding:24px 12px 60px;
+    text-shadow:var(--glow);
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:
+      repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.28) 2px 3px),
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,.85) 100%);
+    mix-blend-mode:multiply;
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+    background:rgba(51,255,51,0.015);
+    animation:flicker 3.2s infinite steps(1);
+  }
+  @keyframes flicker{
+    0%,100%{opacity:.25}
+    47%{opacity:.25}
+    48%{opacity:.55}
+    49%{opacity:.2}
+    92%{opacity:.3}
+  }
+  @media (prefers-reduced-motion: reduce){
+    body::after{animation:none;opacity:.15}
+  }
+
+  .wrapper{max-width:1100px;margin:0 auto}
+
+  .console{
+    border:2px solid var(--green);
+    padding:18px 20px 22px;
+    position:relative;
+    background:rgba(0,20,0,0.08);
+    box-shadow:inset 0 0 22px rgba(51,255,51,.10), 0 0 24px rgba(51,255,51,.22);
+    cursor:text;
+  }
+  .console::before{
+    content:"+==========================================================+";
+    position:absolute;top:-14px;left:0;right:0;
+    color:var(--green);font-family:'VT323',monospace;font-size:20px;
+    letter-spacing:.5px;text-align:center;opacity:.85;
+    white-space:nowrap;overflow:hidden;
+  }
+  .console-header{
+    display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px dashed var(--green);
+    padding-bottom:6px;margin-bottom:12px;
+    font-size:20px;
+  }
+  .console-header .title{font-family:'Press Start 2P',monospace;font-size:11px;letter-spacing:1px}
+  .console-header .prompt-right{opacity:.85}
+
+  /* ===== Navigation bar ===== */
+  .nav-bar{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    padding:8px 0 10px;
+    border-bottom:1px dashed rgba(51,255,51,.35);
+    margin-bottom:12px;
+  }
+  .nav-bar .nav-label{
+    font-family:'Press Start 2P',monospace;font-size:9px;
+    letter-spacing:1px;color:var(--green-dim);margin-right:6px;
+  }
+  .nav-btn{
+    font-family:'VT323',monospace;
+    font-size:20px;
+    color:var(--green);
+    background:transparent;
+    border:1px solid var(--green);
+    padding:1px 10px;
+    text-decoration:none;
+    text-shadow:var(--glow);
+    transition:background .12s linear;
+  }
+  .nav-btn:hover,
+  .nav-btn:focus-visible{
+    background:rgba(51,255,51,.18);
+    outline:none;
+  }
+  .nav-btn.active{
+    background:rgba(51,255,51,.28);
+    box-shadow:inset 0 0 8px rgba(51,255,51,.4);
+  }
+
+  /* ASCII banner */
+  .banner{
+    font-family:'Press Start 2P',monospace;
+    font-size:16px;
+    color:var(--green);
+    text-align:center;
+    letter-spacing:2px;
+    margin:10px 0 16px;
+    position:relative;
+    line-height:1.4;
+  }
+  .banner .aberration{
+    position:absolute;left:0;right:0;top:0;
+    color:#ff2a2a;mix-blend-mode:screen;opacity:.35;
+    transform:translateX(2px);
+    pointer-events:none;
+  }
+  .banner .aberration.b{color:#2a9dff;transform:translateX(-2px);}
+  .banner-inner{position:relative;z-index:2}
+
+  #boot{padding:6px 0 10px;font-size:22px;color:var(--green-dim);}
+  #boot .ok{color:var(--green)}
+  #boot .line{margin:2px 0;white-space:pre-wrap}
+
+  .fade-in{opacity:0;transition:opacity .8s ease}
+  .fade-in.show{opacity:1}
+
+  .section{margin:14px 0;border-top:1px dashed rgba(51,255,51,.35);padding-top:10px}
+  .section-title{font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:1px;color:var(--green);opacity:.9;margin-bottom:8px}
+  .kv{display:grid;grid-template-columns:260px 1fr;gap:2px 12px;font-size:22px}
+  .kv .k{color:var(--green-dim)}
+  .kv .v{color:var(--green)}
+
+  .service-link{
+    color:var(--green);text-decoration:none;padding:1px 4px;display:inline-block;
+  }
+  .service-link:hover,.service-link:focus-visible{
+    background:rgba(51,255,51,.18);outline:none;text-decoration:none;
+  }
+  .service-row{white-space:pre-wrap;word-break:break-all;}
+  .service-row .dash{color:var(--green-dim)}
+
+  .weather-line{margin:2px 0;white-space:pre-wrap;font-size:22px}
+  .weather-line .muted{color:var(--green-dim)}
+  .err{color:var(--amber)}
+
+  #terminal{
+    margin-top:16px;
+    border-top:1px dashed rgba(51,255,51,.35);
+    padding-top:12px;
+    font-size:22px;
+  }
+  #term-out{max-height:340px;overflow-y:auto;padding-right:6px}
+  #term-out::-webkit-scrollbar{width:8px}
+  #term-out::-webkit-scrollbar-thumb{background:rgba(51,255,51,.35)}
+  .term-line{white-space:pre-wrap;word-break:break-word;}
+  .term-line.cmd{color:var(--green)}
+  .term-line.out{color:var(--green);opacity:.92}
+  .term-line.warn{color:var(--amber)}
+  .term-prompt{
+    display:flex;align-items:baseline;gap:6px;margin-top:6px;
+    position:relative;
+  }
+  .term-prompt .ps1{color:var(--green)}
+  .term-input-wrap{flex:1;position:relative}
+  #term-input{
+    background:transparent;border:none;outline:none;
+    color:var(--green);font-family:inherit;font-size:inherit;
+    width:100%;caret-color:transparent;
+    text-shadow:var(--glow);
+    letter-spacing:.5px;
+  }
+  .term-echo{
+    position:absolute;left:0;top:0;pointer-events:none;
+    color:var(--green);white-space:pre;
+  }
+  .cursor{
+    display:inline-block;width:.6ch;background:var(--green);
+    animation:blink 1s step-end infinite;
+    color:transparent;
+  }
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion: reduce){ .cursor{animation:none;opacity:1} }
+
+  #badapple-stage{
+    display:none;margin:8px 0;border:1px dashed rgba(51,255,51,.5);padding:4px;
+  }
+  #badapple-stage video{
+    width:100%;max-height:260px;display:block;
+    filter:grayscale(1) contrast(2) sepia(1) hue-rotate(60deg) saturate(1.4);
+    background:#000;
+  }
+  #badapple-stage video.phosphor{
+    filter:grayscale(1) contrast(2) sepia(1) hue-rotate(60deg) saturate(1.4);
+  }
+  #image-stage{
+    display:none;
+    margin:8px 0;
+    border:1px dashed rgba(51,255,51,.5);
+    padding:4px;
+    text-align:center;
+  }
+  #image-stage img{
+    width:100%;
+    max-height:420px;
+    object-fit:contain;
+    display:block;
+    margin:0 auto;
+    background:#000;
+  }
+  #matrix-canvas{position:fixed;inset:0;z-index:-1;display:none;}
+
+  .quote-block{
+    max-width:1100px;margin:26px auto 0;
+    text-align:center;font-size:22px;color:var(--green);
+    min-height:60px;
+    transition:opacity .8s ease;
+    padding:0 12px;
+  }
+  .quote-block .q{display:block}
+  .quote-block .attr{display:block;color:var(--green-dim);font-size:19px;margin-top:6px}
+
+  :focus-visible{outline:1px dashed var(--green);outline-offset:2px}
+</style>
+</head>
+<body>
+<canvas id="matrix-canvas"></canvas>
+<div class="wrapper">
+  <div class="console" id="console-box" tabindex="-1">
+    <div class="console-header">
+      <span class="title">HOMELAB CONSOLE v1.0</span>
+      <span class="prompt-right" id="header-ps1">root@homelab:~#</span>
+    </div>
+
+    <!-- ===== NAVIGATION ===== -->
+    <nav class="nav-bar" aria-label="Homelab sections">
+      <span class="nav-label">[ SECTION ]</span>
+      <a class="nav-btn active" href="./index.html">CONSOLE</a>
+    </nav>
+
+    <div class="banner" aria-hidden="true">
+      <span class="aberration" id="ab1">H O M E L A B</span>
+      <span class="aberration b" id="ab2">H O M E L A B</span>
+      <span class="banner-inner" id="banner-main">H O M E L A B</span>
+    </div>
+
+    <!-- Boot -->
+    <div id="boot" aria-live="polite"></div>
+
+    <!-- Post-boot content -->
+    <div id="post-boot" class="fade-in">
+      <div class="section">
+        <div class="section-title">[ NETWORK ]</div>
+        <div class="kv">
+          <div class="k">ACCESSED VIA</div><div class="v" id="current-host">--</div>
+          <div class="k">HOSTNAME</div><div class="v">homelab</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">[ SERVICES ] (ls -la /srv)</div>
+        <div id="services-list"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">[ BOOKMARKS ] (ls -la ~/.bookmarks)</div>
+        <div id="bookmarks-list"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">[ WEATHER ]</div>
+        <div id="weather-panel"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">[ CLOCK ]</div>
+        <div class="kv">
+          <div class="k">LOCAL TIME (EUROPE/ATHENS):</div><div class="v" id="clock-local">--</div>
+          <div class="k">UTC TIME:</div><div class="v" id="clock-utc">--</div>
+        </div>
+      </div>
+
+      <div id="terminal">
+        <div class="section-title">[ INTERACTIVE TERMINAL ] — type `help`</div>
+        <div id="term-out" aria-live="polite"></div>
+        <div class="term-prompt" id="term-prompt">
+          <span class="ps1" id="ps1-label">root@homelab:~#</span>
+          <div class="term-input-wrap">
+            <div class="term-echo" id="term-echo"></div><span class="cursor" id="term-cursor">█</span>
+            <input id="term-input" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal input" />
+          </div>
+        </div>
+        <div id="badapple-stage"><video id="badapple-video" playsinline></video></div>
+        <div id="image-stage"><img id="image-display" alt="" /></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote-block" id="quote-block">
+    <span class="q" id="quote-text">…</span>
+    <span class="attr" id="quote-attr">—</span>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   =====================  EDITING GUIDE  ==============================
+   =====================================================================
+   1) ADD A NEW SERVICE
+      → scroll to `// ===== CONFIG ===== services` below.
+      → push { port:'XXXX', name:'MyThing', scheme:'http' }.
+      → If it lives on a different host, add host:'other.host.tld'.
+      → If it needs a path, add path:'/admin' etc.
+
+   1b) ADD A NEW BOOKMARK (same pattern as services)
+      → scroll to `// ===== CONFIG ===== bookmarks` below.
+      → push { name:'MyBookmark', url:'https://example.com' }.
+      → Optional: add `note:'some description'` for a trailing label.
+      → Optional: add `icon:'★'` to override the default folder icon.
+
+   2) ADD A CITY TO THE MAIN WEATHER PANEL
+      → `// ===== CONFIG ===== CITIES` below.
+      → each entry: { label:'ATHENS, GR', lat:37.98, lon:23.72 }.
+
+   3) ADD A ROTATING QUOTE
+      → `// ===== CONFIG ===== QUOTES` below. { text:'', author:'' }.
+
+   4) ADD A NEW TERMINAL COMMAND
+      → `// ===== CONFIG ===== COMMANDS` below.
+      → Add an entry whose value has { help, usage?, run }.
+      → run(args, ctx) receives args (array) and ctx with:
+           ctx.print(text, opts), ctx.clear(),
+           ctx.play(url, {loop,volume}), ctx.stopAudio().
+      → `help` auto-lists everything, so you don't edit it.
+
+   5) AUDIO FILES
+      → ./anthem.mp3  (communism / kke / karl marx / ussr)
+      → ./badapple.mp3 (fallback)
+      → ./badapple.mp4 (preferred — renders in-terminal)
+
+   6) CHANGE THE PROMPT
+      → `PROMPT` constant below (default 'root@homelab:~#').
+
+   7) HOST / URL BEHAVIOUR
+      → `CURRENT_HOST` = window.location.hostname (auto-detected).
+      → Service links are built from CURRENT_HOST unless an explicit
+        `host` is set on the service entry.
+
+   8) FOLDER LISTINGS (auto-detected by serve.py)
+      → The server exposes /list/<folder> for whitelisted folders:
+           /list/stuff
+           /list/Images
+           /list/random-songs
+        Each returns { "files": ["a.png", "b.jpg", ...] }.
+      → Add a folder to the LISTABLE dict in serve.py to expose it.
+      → The console uses this for: stuff, stuff-list, image, random-song.
+   ===================================================================== */
+
+/* ===== CONFIG ===== */
+const PROMPT = 'root@homelab:~#';
+
+// The host you're currently accessing this page from.
+const CURRENT_HOST = window.location.hostname;
+
+/* =====================================================================
+   SERVICE URLS — AUTO-DETECT HOST
+   ===================================================================== */
+const services = [
+  { port: '8096',  name: 'Jellyfin',  scheme: 'http' },
+  { port: '443',   name: 'Tailscale', host: 'console.tailscale.com', scheme: 'https', path: '/admin/machines?refreshed=true' },
+];
+
+/* =====================================================================
+   BOOKMARKS — PLAIN LINKS, SAME PATTERN AS SERVICES
+   ---------------------------------------------------------------------
+   Each entry: { name, url, note?, icon? }
+     - name : display text (required)
+     - url  : full link target (required)
+     - note : optional trailing description
+     - icon : optional single char, defaults to '▸'
+   ===================================================================== */
+const bookmarks = [
+  { name: 'GitHub',       url: 'https://github.com',                  note: 'code hosting' },
+  { name: 'Proton Mail',  url: 'https://mail.proton.me',              note: 'mail' },
+  { name: 'Wikipedia',    url: 'https://en.wikipedia.org',            note: 'the free encyclopedia' },
+  { name: 'YT music',     url: 'https://music.youtube.com/',          note: 'nusic' },
+  // TO ADD MORE: follow the pattern above.
+];
+
+function buildServiceUrl(svc){
+  const host = svc.host || CURRENT_HOST;
+  let scheme = svc.scheme;
+  if(!scheme){
+    const isPrivate = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|127\.|localhost$)/.test(host)
+                   || host.endsWith('.local')
+                   || host.endsWith('.ts.net');
+    scheme = isPrivate ? 'http' : 'https';
+  }
+  const path = svc.path || '';
+  return `${scheme}://${host}:${svc.port}${path}`;
+}
+
+// TO CHANGE COORDINATES: edit the CITIES array below.
+const CITIES = [
+  { label: 'TOKYO, JP', lat: 35.6895, lon: 139.6917 },
+  { label: 'LONDON, UK', lat: 51.50735, lon: -0.12776 },
+  { label: 'BEIJING, CN', lat: 39.9042, lon: 116.4074 },
+  { label: 'ATHENS, GR',      lat: 37.9838, lon: 23.7275 },
+  { label: 'NEW YORK, USA', lat: 40.7143, lon: -74.0060 },
+];
+
+const QUOTES = [
+  { text: "The Earth is the cradle of humanity, but mankind cannot stay in the cradle forever.", author: "Konstantin Tsiolkovsky" },
+  { text: "That's one small step for a man, one giant leap for mankind.", author: "Neil Armstrong" },
+  { text: "I could have gone on flying through space forever.", author: "Yuri Gagarin" },
+  { text: "Somewhere, something incredible is waiting to be known.", author: "Carl Sagan" },
+  { text: "The important thing is not to stop questioning.", author: "Albert Einstein" },
+  { text: "Nothing in life is to be feared, it is only to be understood.", author: "Marie Curie" },
+];
+
+/* ===== SHARED HELPERS ===== */
+
+// Fetch a folder listing from the server. Returns an array of filenames
+// (empty on error). The server scans the folder on every request, so
+// dropping a file into ./stuff/ makes it show up immediately.
+async function listFolder(folder){
+  const r = await fetch('/list/' + encodeURIComponent(folder), {cache: 'no-store'});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if(j.error) throw new Error(j.error);
+  return j.files || [];
+}
+
+// Pick from a pool: if `filter` is given, prefer exact match, else substring.
+// Returns the chosen filename or null if nothing matches.
+function pickFromPool(pool, filter){
+  if(!pool.length) return null;
+  if(!filter) return pool[Math.floor(Math.random() * pool.length)];
+  const q = filter.toLowerCase();
+  const exact = pool.find(n => n.toLowerCase() === q);
+  if(exact) return exact;
+  const matches = pool.filter(n => n.toLowerCase().includes(q));
+  if(!matches.length) return null;
+  return matches[Math.floor(Math.random() * matches.length)];
+}
+
+// Show an image (or video) in the shared #image-stage.
+function displayMedia(url, ctx, label){
+  const stage = document.getElementById('image-stage');
+  const display = document.getElementById('image-display');
+  display.onload = () => {
+    stage.style.display = 'block';
+    stage.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  };
+  display.onerror = () => {
+    stage.style.display = 'none';
+    ctx.print('ERR: FILE FAILED TO LOAD (' + label + ')', {cls:'warn'});
+  };
+  display.src = url;
+}
+
+/* ===== COMMAND HELPERS ===== */
+function cmdHelp(args, ctx){
+  const names = Object.keys(COMMANDS).sort();
+  const rows = names.map(n=>{
+    const c = COMMANDS[n];
+    const usage = c.usage || n;
+    return [usage.padEnd(28,' '), c.help || ''];
+  });
+  ctx.print('AVAILABLE COMMANDS:');
+  rows.forEach(r=>ctx.print('  ' + r[0] + '  ' + r[1]));
+}
+function cmdClear(args, ctx){ ctx.clear(); }
+
+async function cmdWeather(args, ctx){
+  if(!args.length){ ctx.print('ERR: USAGE: weather <city>, <country>', {cls:'warn'}); return; }
+  const raw = args.join(' ');
+  const [city, ...rest] = raw.split(',').map(s=>s.trim());
+  const country = rest.join(',').trim();
+  ctx.print(`> GEOCODING ${city.toUpperCase()}${country? ', '+country.toUpperCase():''}...`);
+  try{
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=5&language=en&format=json`;
+    const gj = await fetch(geoUrl).then(r=>r.json());
+    if(!gj.results || !gj.results.length){ ctx.print('ERR: CITY NOT FOUND', {cls:'warn'}); return; }
+    let hit = gj.results[0];
+    if(country){
+      const c = country.toLowerCase();
+      const m = gj.results.find(r => (r.country||'').toLowerCase().includes(c) || (r.country_code||'').toLowerCase() === c);
+      if(m) hit = m;
+    }
+    const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto`;
+    const wj = await fetch(wUrl).then(r=>r.json());
+    const cur = wj.current;
+    const desc = wmoText(cur.weather_code);
+    const flag = hit.country_code ? hit.country_code.toUpperCase() : '??';
+    ctx.print(`[ ${hit.name.toUpperCase()}, ${flag} ] ${cur.temperature_2m.toFixed(1)}°C  WIND ${Math.round(cur.wind_speed_10m)} km/h  ${desc}`);
+    const localTime = new Date(cur.time).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    ctx.print(`COORDS: ${hit.latitude.toFixed(4)}, ${hit.longitude.toFixed(4)}   LOCAL TIME: ${localTime}`);
+  }catch(e){
+    ctx.print('ERR: WEATHER LOOKUP FAILED', {cls:'warn'});
+  }
+}
+
+/* ===== image — ./Images/ ===== */
+async function cmdImage(args, ctx){
+  const requested = args.join(' ').trim();
+  let images;
+  try{
+    images = await listFolder('Images');
+  }catch(e){
+    ctx.print('ERR: COULD NOT LIST ./Images/ (' + e.message + ')', {cls:'warn'});
+    return;
+  }
+  if(!images.length){ ctx.print('ERR: NO FILES IN ./Images/', {cls:'warn'}); return; }
+
+  const pick = pickFromPool(images, requested);
+  if(!pick){
+    ctx.print('ERR: NO IMAGE MATCHING "' + requested + '"', {cls:'warn'});
+    return;
+  }
+
+  ctx.print('');
+  ctx.print('◼  IMAGE: ' + pick.toUpperCase() + '  ◼');
+  ctx.print('[██████████████████████████████████████████████]');
+  ctx.print('');
+  displayMedia('./Images/' + encodeURIComponent(pick), ctx, pick);
+}
+
+/* ===== bookmarks — list every bookmark in the terminal ===== */
+function cmdBookmarks(args, ctx){
+  if(!bookmarks.length){ ctx.print('ERR: NO BOOKMARKS CONFIGURED', {cls:'warn'}); return; }
+  ctx.print(`> BOOKMARKS (${bookmarks.length})`);
+  bookmarks.forEach(b => {
+    const note = b.note ? '  — ' + b.note : '';
+    ctx.print('  ▸ ' + b.name + '  ' + b.url + note);
+  });
+}
+
+/* ===== random-song — ./random-songs/ ===== */
+async function cmdRandomSong(args, ctx){
+  ctx.stopAudio();
+  ctx.print('> SCANNING ./random-songs/...');
+
+  let songs;
+  try{
+    songs = await listFolder('random-songs');
+  }catch(e){
+    ctx.print('ERR: COULD NOT LIST ./random-songs/ (' + e.message + ')', {cls:'warn'});
+    return;
+  }
+  if(!songs.length){ ctx.print('ERR: NO SONGS IN ./random-songs/', {cls:'warn'}); return; }
+
+  const pick = songs[Math.floor(Math.random() * songs.length)];
+  const name = pick.replace(/\.[^.]+$/, '');
+
+  ctx.print('');
+  ctx.print('♪  NOW PLAYING: ' + name.toUpperCase() + '  ♪');
+  ctx.print('[██████████████████████████████████████████████]');
+  ctx.print('');
+
+  ctx.play('./random-songs/' + encodeURIComponent(pick), {volume: 0.9});
+}
+
+async function cmdBadApple(args, ctx){
+  ctx.stopAudio();
+  ctx.print('> LOADING BAD APPLE...');
+  const stage = document.getElementById('badapple-stage');
+  const video = document.getElementById('badapple-video');
+  try{
+    const head = await fetch('./badapple.mp4', {method:'HEAD'});
+    if(head.ok){
+      ctx.print('> MODE: FULL VIDEO (in-terminal)');
+      stage.style.display = 'block';
+      video.classList.add('phosphor');
+      video.src = './badapple.mp4';
+      video.loop = true;
+      video.muted = false;
+      video.volume = 0.8;
+      await video.play().catch(()=>{});
+      ctx.setAudioEl(video);
+      return;
+    }
+  }catch(e){}
+  ctx.print('> MODE: AUDIO + ASCII FALLBACK');
+  ctx.print('  (drop ./badapple.mp4 next to index.html for the full show)');
+  ctx.play('./badapple.mp3', {loop:true, volume:0.8});
+  const frames = [
+    '  ▄▄▄▄▄  ▄▄▄▄▄  ▄▄▄▄▄  ',
+    ' █     ██     ██     █ ',
+    ' █ BAD ██ APP ██ LE  █ ',
+    ' █     ██     ██     █ ',
+    '  ▀▀▀▀▀  ▀▀▀▀▀  ▀▀▀▀▀  ',
+  ];
+  let i = 0;
+  const iv = setInterval(()=>{
+    ctx.print(frames[i % frames.length]);
+    i++;
+    if(i > 30){ clearInterval(iv); }
+  }, 120);
+}
+
+function cmdStop(args, ctx){
+  ctx.stopAudio();
+}
+/* =====================================================================
+   TO ADD A NEW COMMAND:
+     1. Add an entry to the COMMANDS object below.
+     2. Each key is the command name (what the user types).
+     3. The value is an object with:
+          - help:   short description shown in `help` output
+          - usage:  optional usage string
+          - run:    async function(args, ctx) { ... }
+     4. The `help` command auto-lists every entry — no need to edit it.
+   ===================================================================== */
+const COMMANDS = {
+  help:            { help: 'Show this list of commands.', run: cmdHelp },
+  clear:           { help: 'Clear the terminal screen.', run: cmdClear },
+  weather:         { help: 'Show weather for a city.', usage: 'weather <city>, <country>', run: cmdWeather },
+  image:           { help: 'Show a random image from ./Images/.', usage: 'image [filter]', run: cmdImage },
+  bookmarks:       { help: 'List all configured bookmarks.',      run: cmdBookmarks },
+  'random-song':   { help: 'Play a random song from ./random-songs/.', run: cmdRandomSong },
+  badapple:        { help: 'Play Bad Apple.', run: cmdBadApple },
+  ip:              { help: 'Show current host & LAN IP.', run: (a, ctx) => {
+                       ctx.print(`ACCESSED VIA : ${CURRENT_HOST}`);
+                       const el = document.getElementById('local-ip');
+                       ctx.print(`LAN IP       : ${el ? el.textContent : 'n/a'}`);
+                   } },
+  stop:            { help: 'Stops music', run: cmdStop },
+  // TO ADD MORE: follow the pattern above.
+};
+/* ===== WMO helper ===== */
+function wmoText(code){
+  const map = {
+    0:'CLEAR',1:'MAINLY CLEAR',2:'PARTLY CLOUDY',3:'OVERCAST',
+    45:'FOG',48:'RIME FOG',51:'LIGHT DRIZZLE',53:'DRIZZLE',55:'HEAVY DRIZZLE',
+    61:'LIGHT RAIN',63:'RAIN',65:'HEAVY RAIN',71:'LIGHT SNOW',73:'SNOW',75:'HEAVY SNOW',
+    80:'RAIN SHOWERS',81:'HEAVY SHOWERS',82:'VIOLENT SHOWERS',95:'THUNDERSTORM',
+  };
+  return map[code] || 'UNKNOWN';
+}
+
+/* ===== Terminal engine ===== */
+const termOut = document.getElementById('term-out');
+const termInput = document.getElementById('term-input');
+const termEcho = document.getElementById('term-echo');
+const ps1Label = document.getElementById('ps1-label');
+ps1Label.textContent = PROMPT;
+
+let audioEl = null;
+function setAudioEl(el){ audioEl = el; }
+const ctx = {
+  print(text, opts={}){
+    const div = document.createElement('div');
+    div.className = 'term-line ' + (opts.cls || 'out');
+    div.textContent = text;
+    termOut.appendChild(div);
+    termOut.scrollTop = termOut.scrollHeight;
+  },
+  clear(){ termOut.innerHTML = ''; },
+  play(url, {loop=false, volume=1}={}){
+    try{
+      if(audioEl && audioEl !== badappleVideo){ audioEl.pause(); }
+      audioEl = new Audio(url);
+      audioEl.loop = loop; audioEl.volume = volume;
+      audioEl.play().catch(()=>{ ctx.print('ERR: AUDIO PLAYBACK BLOCKED (interact first)', {cls:'warn'}); });
+    }catch(e){ ctx.print('ERR: AUDIO FAILED', {cls:'warn'}); }
+  },
+  stopAudio(){
+    if(audioEl){ try{ audioEl.pause(); audioEl.currentTime = 0; }catch(e){} audioEl = null; }
+    const stage = document.getElementById('badapple-stage');
+    const v = document.getElementById('badapple-video');
+    if(stage){ stage.style.display='none'; }
+    if(v){ try{ v.pause(); v.removeAttribute('src'); v.load(); }catch(e){} }
+  },
+  setAudioEl
+};
+const badappleVideo = document.getElementById('badapple-video');
+
+// History
+let history = [];
+try{ history = JSON.parse(localStorage.getItem('terminal_history') || '[]'); }catch(e){}
+let histIdx = history.length;
+
+function syncEcho(){ termEcho.textContent = termInput.value; }
+termInput.addEventListener('input', syncEcho);
+
+document.getElementById('console-box').addEventListener('click', (e)=>{
+  if(e.target.closest('a,button,input,select,textarea')) return;
+  termInput.focus();
+});
+
+termInput.addEventListener('keydown', async (e)=>{
+  if(e.key === 'Enter'){
+    const raw = termInput.value.trim();
+    termInput.value = ''; syncEcho();
+    if(!raw) return;
+    ctx.print(PROMPT + ' ' + raw, {cls:'cmd'});
+    if(history[history.length-1] !== raw){ history.push(raw); localStorage.setItem('terminal_history', JSON.stringify(history.slice(-200))); }
+    histIdx = history.length;
+    const lower = raw.toLowerCase();
+    const twoWord = lower.split(/\s+/).slice(0,2).join(' ');
+    let name, args;
+    if(COMMANDS[twoWord] && !COMMANDS[lower]){
+      name = twoWord;
+      args = raw.split(/\s+/).slice(2);
+    } else {
+      const parts = raw.split(/\s+/);
+      name = parts[0].toLowerCase();
+      args = parts.slice(1);
+    }
+    const cmd = COMMANDS[name];
+    if(!cmd){ ctx.print(`ERR: COMMAND NOT FOUND: ${name}. Try 'help'.`, {cls:'warn'}); return; }
+    try{ await cmd.run(args, ctx); }catch(err){ ctx.print('ERR: ' + err.message, {cls:'warn'}); }
+  } else if(e.key === 'ArrowUp'){
+    if(histIdx > 0){ histIdx--; termInput.value = history[histIdx] || ''; syncEcho(); e.preventDefault(); }
+  } else if(e.key === 'ArrowDown'){
+    if(histIdx < history.length - 1){ histIdx++; termInput.value = history[histIdx] || ''; }
+    else { histIdx = history.length; termInput.value = ''; }
+    syncEcho(); e.preventDefault();
+  } else if(e.key === 'Tab'){
+    e.preventDefault();
+    const v = termInput.value.toLowerCase();
+    if(!v) return;
+    const matches = Object.keys(COMMANDS).filter(k=>k.startsWith(v));
+    if(matches.length === 1){ termInput.value = matches[0] + ' '; syncEcho(); }
+    else if(matches.length > 1){ ctx.print(matches.join('  ')); }
+  }
+});
+
+document.addEventListener('keydown', (e)=>{
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if(e.key.length === 1 || e.key === 'Enter'){ termInput.focus(); }
+});
+
+/* ===== Boot sequence ===== */
+const BOOT_LINES = [
+  { t:'> INITIALIZING HOMELAB MATRIX...', ok:false },
+  { t:'> LOADING SERVICE DAEMONS...', ok:false },
+  { t:'> MOUNTING /dev/homelab...', ok:false },
+  { t:'> PROBING NETWORK INTERFACE............ OK', ok:true },
+  { t:'> CHECKING TAILSCALE UPLINK........... OK', ok:true },
+  { t:'> SYNCHRONIZING CLOCK (Europe/Athens).. OK', ok:true },
+  { t:'> READY.', ok:true },
+];
+const bootEl = document.getElementById('boot');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+async function typeLine(lineEl, text, speed=18){
+  return new Promise(res=>{
+    let i = 0;
+    const iv = setInterval(()=>{
+      lineEl.textContent = text.slice(0, ++i);
+      if(i >= text.length){ clearInterval(iv); res(); }
+    }, speed);
+  });
+}
+
+async function runBoot(){
+  if(reduceMotion){
+    BOOT_LINES.forEach(l=>{
+      const d = document.createElement('div');
+      d.className = 'line' + (l.ok ? ' ok' : '');
+      d.textContent = l.t;
+      bootEl.appendChild(d);
+    });
+    reveal();
+    return;
+  }
+  for(const line of BOOT_LINES){
+    const d = document.createElement('div');
+    d.className = 'line';
+    bootEl.appendChild(d);
+    await typeLine(d, line.t, 16);
+    if(line.ok) d.classList.add('ok');
+    await new Promise(r=>setTimeout(r, 90));
+  }
+  await new Promise(r=>setTimeout(r, 350));
+  reveal();
+}
+function reveal(){
+  document.getElementById('post-boot').classList.add('show');
+  initAfterBoot();
+}
+
+/* ===== Host display ===== */
+function refreshHostDisplay(){
+  document.getElementById('current-host').textContent = CURRENT_HOST;
+}
+
+/* ===== WebRTC LAN probe (secondary line) ===== */
+async function detectLanIP(){
+  if(typeof OVERRIDE_IP !== 'undefined' && OVERRIDE_IP) return OVERRIDE_IP;
+  return new Promise((resolve)=>{
+    let done = false;
+    const finish = (ip)=>{ if(done) return; done=true; resolve(ip); };
+    try{
+      const pc = new RTCPeerConnection({iceServers:[]});
+      pc.createDataChannel('');
+      pc.onicecandidate = (e)=>{
+        if(!e || !e.candidate) return;
+        const cand = e.candidate.candidate || '';
+        const m = cand.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
+        if(m){
+          const ip = m[1];
+          if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip)){ finish(ip); }
+        }
+      };
+      pc.createOffer().then(o=>pc.setLocalDescription(o)).catch(()=>{});
+      setTimeout(()=>{
+        try{ pc.close(); }catch(e){}
+        fetch('/whoami').then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+          const ip = (t||'').trim();
+          finish(ip || 'UNAVAILABLE (WebRTC BLOCKED)');
+        }).catch(()=>finish('UNAVAILABLE (WebRTC BLOCKED)'));
+      }, 1800);
+    }catch(e){
+      finish('UNAVAILABLE (WebRTC BLOCKED)');
+    }
+  });
+}
+async function refreshLanIP(){
+  const el = document.getElementById('local-ip');
+  if(!el) return;
+  const ip = await detectLanIP();
+  el.textContent = ip;
+  if(ip.startsWith('UNAVAILABLE')) el.classList.add('err'); else el.classList.remove('err');
+}
+
+/* ===== Service listing ===== */
+function renderServices(){
+  const list = document.getElementById('services-list');
+  list.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'service-row';
+  header.innerHTML = `<span class="dash">total ${services.length}  (host: ${CURRENT_HOST})</span>`;
+  list.appendChild(header);
+
+  services.forEach(s => {
+    const url = buildServiceUrl(s);
+    const shown = url.replace(/^https?:\/\//,'');
+    const row = document.createElement('div');
+    row.className = 'service-row';
+    row.innerHTML =
+      `<span class="dash">drwxr-xr-x</span>  ` +
+      `<a class="service-link" href="${url}" target="_blank" rel="noopener noreferrer">${s.name}</a>  ` +
+      `<span class="dash">:${s.port} → ${shown}</span>`;
+    list.appendChild(row);
+  });
+}
+
+/* ===== Bookmark listing (same pattern as services) ===== */
+function renderBookmarks(){
+  const list = document.getElementById('bookmarks-list');
+  list.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'service-row';
+  header.innerHTML = `<span class="dash">total ${bookmarks.length}</span>`;
+  list.appendChild(header);
+
+  bookmarks.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'service-row';
+    const icon = b.icon || '▸';
+    const note = b.note ? `  <span class="dash">— ${b.note}</span>` : '';
+    row.innerHTML =
+      `<span class="dash">${icon}</span>  ` +
+      `<a class="service-link" href="${b.url}" target="_blank" rel="noopener noreferrer">${b.name}</a>` +
+      note;
+    list.appendChild(row);
+  });
+}
+
+/* ===== Weather panel ===== */
+async function refreshWeather(){
+  const panel = document.getElementById('weather-panel');
+  panel.innerHTML = '';
+  for(const city of CITIES){
+    const line = document.createElement('div');
+    line.className = 'weather-line';
+    line.textContent = `[ ${city.label} ] FETCHING...`;
+    panel.appendChild(line);
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,wind_speed_10m,weather_code&timezone=auto`;
+      const j = await fetch(url).then(r=>r.json());
+      const c = j.current;
+      line.textContent = `[ ${city.label} ] ${c.temperature_2m.toFixed(1)}°C WIND ${Math.round(c.wind_speed_10m)} km/h ${wmoText(c.weather_code)}`;
+    }catch(e){
+      line.textContent = `[ ${city.label} ] ERR`;
+      line.classList.add('err');
+    }
+  }
+}
+
+/* ===== Clock ===== */
+function fmtAthens(d){
+  return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Athens',weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZoneName:'short'}).format(d).toUpperCase().replace(',','');
+}
+function fmtUTC(d){
+  return new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZoneName:'short'}).format(d).toUpperCase().replace(',','');
+}
+function tickClock(){
+  const d = new Date();
+  document.getElementById('clock-local').textContent = fmtAthens(d);
+  document.getElementById('clock-utc').textContent = fmtUTC(d);
+}
+
+/* ===== Quotes ===== */
+let quoteIdx = Math.floor(Math.random()*QUOTES.length);
+function showQuote(){
+  const q = QUOTES[quoteIdx % QUOTES.length];
+  const el = document.getElementById('quote-block');
+  el.style.opacity = '0';
+  setTimeout(()=>{
+    document.getElementById('quote-text').textContent = '“' + q.text + '”';
+    document.getElementById('quote-attr').textContent = '— ' + q.author;
+    el.style.opacity = '1';
+    quoteIdx++;
+  }, 400);
+}
+
+/* ===== Post-boot init ===== */
+let inited = false;
+function initAfterBoot(){
+  if(inited) return; inited = true;
+  refreshHostDisplay();
+  renderServices();
+  renderBookmarks();
+  refreshLanIP();
+  refreshWeather();
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(refreshLanIP, 60000);
+  setInterval(refreshWeather, 600000);
+  showQuote();
+  setInterval(showQuote, 20000);
+  ctx.print('HOMELAB CONSOLE READY. Type `help` for commands.');
+  ctx.print(`ACCESSED VIA: ${CURRENT_HOST}`);
+  termInput.focus();
+}
+
+runBoot();
+</script>
+</body>
+</html>

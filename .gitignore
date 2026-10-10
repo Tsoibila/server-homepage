@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+
+# Media — keep local, don't commit
+Images/*
+!Images/.gitkeep
+random-songs/*
+!random-songs/.gitkeep
+
+# OS junk
+.DS_Store
+Thumbs.db
+*.swp
