@@ -22,7 +22,7 @@ can treat the console like any other daemon.
 sudo nano /etc/systemd/system/homelab.service
 ```
 
-Paste this — **replace `spadas` with your username if it's different**,
+Paste this — **replace `user` with your username if it's different**,
 and double-check the paths:
 
 ```ini
@@ -32,10 +32,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=spadas
-Group=spadas
-WorkingDirectory=/home/spadas/homepage
-ExecStart=/usr/bin/python3 /home/spadas/homepage/serve.py
+User=user
+Group=user
+WorkingDirectory=/home/user/homepage
+ExecStart=/usr/bin/python3 /home/user/homepage/serve.py
 Restart=on-failure
 RestartSec=5
 
