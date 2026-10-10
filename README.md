@@ -32,6 +32,11 @@ locally — no cloud, no accounts, no telemetry.
 
 No dependencies. No `pip install`. No build step.
 
+## Screenshots
+![Screenshot](screenshots/quote.png)
+![Screenshot](screenshots/random-song.png)
+![Screenshot](screenshots/badapple.png)
+
 ## Setup
 
 1. Clone the repo:
