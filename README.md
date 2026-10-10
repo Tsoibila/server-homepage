@@ -211,3 +211,7 @@ but please don't redistribute or host it as your own.
 
 Photos and other media you add yourself are your own, they're not
 covered by this license.
+
+### Free will
+I listened to Kino while making this :)
+also this has been done over several months, im just now uploading it to github
