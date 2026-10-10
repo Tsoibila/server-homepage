@@ -33,11 +33,11 @@ locally — no cloud, no accounts, no telemetry.
 No dependencies. No `pip install`. No build step.
 
 ## Screenshots
-# quote 
+- quote 
 ![Screenshot](screenshots/quote.png)
-# random-song in use
+- random-song in use
 ![Screenshot](screenshots/random-song.png)
-# badapple in use
+- badapple in use
 ![Screenshot](screenshots/badapple.png)
 
 ## Setup
